@@ -49,8 +49,11 @@ the latest version of the key is allowed.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
+		// example of just updating to Operations from Callbacks with no other additions
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+			},
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,

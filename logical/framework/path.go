@@ -87,6 +87,28 @@ type Path struct {
 	// be automatically line-wrapped at 80 characters.
 	HelpSynopsis    string
 	HelpDescription string
+
+	// If both Create and Update are present, documentation and examples
+	// in the Update definition will be used.
+	Operations map[logical.Operation]OperationHandler
+}
+
+type OperationHandler interface {
+	HandleRequest(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
+	OpSummary() string
+	OpDescription() string
+	OpExample() string
+	OpResponses() map[int]Response
+}
+
+type PathOperation struct {
+	Callback    OperationFunc
+	Summary     string
+	Description string
+	Responses   map[int]Response
+	Example     string
+}
+
 }
 
 func (p *Path) helpCallback() OperationFunc {

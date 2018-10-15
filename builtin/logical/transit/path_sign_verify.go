@@ -48,10 +48,12 @@ Defaults to "sha2-256". Not valid for all key types,
 including ed25519.`,
 			},
 
+			// Deprecation can be specified for fields and operations
 			"algorithm": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "sha2-256",
 				Description: `Deprecated: use "hash_algorithm" instead.`,
+				Deprecated:  true,
 			},
 
 			"urlalgorithm": &framework.FieldSchema{

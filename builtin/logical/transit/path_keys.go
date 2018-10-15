@@ -10,21 +10,39 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/ed25519"
 )
 
 func (b *backend) pathListKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathKeysList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathKeysList,
+				// Responses are optional and can include per-code descriptions and examples.
+				// Examples that are valid JSON will be added as JSON (which is often rendered
+				// specially by viewers (or in gen'd docs). Non-JSON examples will be simply be
+				// inserted as a string.
+				Responses: map[int]framework.Response{
+					200: framework.Response{
+						Example: `
+                          {
+                            "data": {
+                              "keys": ["foo", "bar"]
+                            },
+                            "lease_duration": 0,
+                            "lease_id": "",
+                            "renewable": false
+                          }`,
+					},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
@@ -97,10 +115,28 @@ return the public key for the given context.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.DeleteOperation: b.pathPolicyDelete,
-			logical.ReadOperation:   b.pathPolicyRead,
+		// Adding per-operation summaries (and optionally descriptions) is probably the most useful new
+		// information. The operations no longer have to bunched under the same "Manage..." summary, and the
+		// descriptions can be detailed and include Markdown if desired.
+		Operations: map[logical.Operation]framework.OperationHandler{
+			// Note if both Update and Create are specified, only the Callback from Create
+			// is needed/used. Documentation will only ever show a POST operation, and the
+			// docs will come from the Update object (or Create if it's the only operation,
+			// though that's not common).
+			logical.UpdateOperation: &framework.PathOperation{
+				Summary:  "Create a new named encryption key of the specified type.",
+				Callback: b.pathPolicyWrite,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Summary:     "Retrieve information about a named encryption key.",
+				Description: "The keys object shows the creation time of each key version; the values are not the keys themselves. Depending on the type of key, different information may be returned, e.g. an asymmetric key will return its public key in a standard format for the type.",
+				Callback:    b.pathPolicyRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback:    b.pathPolicyDelete,
+				Summary:     "Delete a named encryption key",
+				Description: "It will no longer be possible to decrypt any data encrypted with the named key. Because this is a potentially catastrophic operation, the `deletion_allowed` tunable must be set in the key's /config endpoint.",
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
