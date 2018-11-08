@@ -333,6 +333,9 @@ type Core struct {
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
 
+	// timersDisabled indicates whether lease expiration timers are disabled
+	expirationTimersDisabled bool
+
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reload.ReloadFunc
 
@@ -508,6 +511,9 @@ type CoreConfig struct {
 	// Disables the LRU cache on the physical backend
 	DisableCache bool `json:"disable_cache" structs:"disable_cache" mapstructure:"disable_cache"`
 
+	// Disables setting up token lease expiration timers
+	DisableExpirationTimers bool `json:"disable_timers" structs:"disable_timers" mapstructure:"disable_timers"`
+
 	// Disables mlock syscall
 	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
 
@@ -666,6 +672,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
+		expirationTimersDisabled:     conf.DisableExpirationTimers,
 		clusterName:                  conf.ClusterName,
 		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,

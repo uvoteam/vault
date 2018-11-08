@@ -93,6 +93,7 @@ type ExpirationManager struct {
 	// RegisterAuth to simulate a partial failure during a token creation
 	// request. This value should only be set by tests.
 	testRegisterAuthFailure uberAtomic.Bool
+	expirationTimersDisabled bool
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
@@ -163,6 +164,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
+
+		expirationTimersDisabled: false,
 	}
 	*exp.restoreMode = 1
 
@@ -186,6 +189,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	expLogger := c.baseLogger.Named("expiration")
 	c.AddLogger(expLogger)
 	mgr := NewExpirationManager(c, view, e, expLogger)
+	mgr.expirationTimersDisabled = c.expirationTimersDisabled
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -1321,6 +1325,10 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
+	if m.expirationTimersDisabled {
+		return
+	}
+
 	// Check for an existing timer
 	pending, ok := m.pending[le.LeaseID]
 

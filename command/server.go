@@ -1041,6 +1041,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
 		SecureRandomReader:        secureRandomReader,
+		DisableExpirationTimers:   config.DisableExpirationTimers,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID

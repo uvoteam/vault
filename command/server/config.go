@@ -39,6 +39,9 @@ type Config struct {
 	DisablePrintableCheck    bool        `hcl:"-"`
 	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
+	DisableExpirationTimers    bool        `hcl:"-"`
+	DisableExpirationTimersRaw interface{} `hcl:"disable_timers"`
+
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
 
@@ -319,6 +322,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableCache = c2.DisableCache
 	}
 
+	result.DisableExpirationTimers = c.DisableExpirationTimers
+	if c2.DisableExpirationTimers {
+		result.DisableExpirationTimers = c2.DisableExpirationTimers
+	}
+
 	result.DisableMlock = c.DisableMlock
 	if c2.DisableMlock {
 		result.DisableMlock = c2.DisableMlock
@@ -508,6 +516,12 @@ func ParseConfig(d string) (*Config, error) {
 
 	if result.DisableCacheRaw != nil {
 		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableExpirationTimersRaw != nil {
+		if result.DisableExpirationTimers, err = parseutil.ParseBool(result.DisableExpirationTimersRaw); err != nil {
 			return nil, err
 		}
 	}
