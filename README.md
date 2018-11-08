@@ -1,4 +1,13 @@
-# Vault [![CircleCI](https://circleci.com/gh/hashicorp/vault.svg?style=svg)](https://circleci.com/gh/hashicorp/vault) [![Join the chat at https://gitter.im/hashicorp-vault/Lobby](https://badges.gitter.im/hashicorp-vault/Lobby.svg)](https://gitter.im/hashicorp-vault/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
+# Vault (forked!)
+
+**Fork purpose**: This is an attempt to get vault to work in crude
+"productivity replication mode", where replication is handled by storage
+backend (mysql in our case).
+
+**CAUTION:** If you choose to use this fork, you do so at your own risk.
+Neither Hashicorp nor Uvoteam will accept any complaints of data loss or harm
+done while using this patched software. Though, improvements and suggestions
+are welcome.
 
 ----
 
