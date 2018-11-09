@@ -470,7 +470,14 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 		cache = ps.egpLRU
 		view = ps.getEGPView(ns)
 	case PolicyTypeToken:
+		// RGP policies are only available in Vault Enterprise, thus we're just
+		// cutting everything out here. This breaks compatibility with VE, but
+		// the sole purpose of this modification is to not have to use VE.
+		// We're not cutting entire policyTypeMap struct field only to keep
+		// changes at minimum to improve patch maintainability.
 		cache = ps.tokenPoliciesLRU
+		policyType = PolicyTypeACL
+		/*
 		val, ok := ps.policyTypeMap.Load(index)
 		if !ok {
 			// Doesn't exist
@@ -479,12 +486,15 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 		policyType = val.(PolicyType)
 		switch policyType {
 		case PolicyTypeACL:
+			*/
 			view = ps.getACLView(ns)
+			/*
 		case PolicyTypeRGP:
 			view = ps.getRGPView(ns)
 		default:
 			return nil, fmt.Errorf("invalid type of policy in type map: %q", policyType)
 		}
+		*/
 	}
 
 	if cache != nil {
