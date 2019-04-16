@@ -643,9 +643,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	syncInterval := conf.CounterSyncInterval
+	/*
 	if syncInterval.Nanoseconds() == 0 {
 		syncInterval = 30 * time.Second
 	}
+	*/
 
 	// secureRandomReader cannot be nil
 	if conf.SecureRandomReader == nil {
