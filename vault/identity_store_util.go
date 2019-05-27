@@ -175,6 +175,59 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	return nil
 }
 
+// This is refactored out of loadEntities() to be used from request handling in
+// case of disabled cache (MemDB is exactly that).
+func (i *IdentityStore) loadEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
+	entity, err := i.parseEntityFromBucketItem(ctx, item)
+	if err != nil {
+		return nil, err
+	}
+	if entity == nil {
+		return nil, nil
+	}
+
+	ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+	if err != nil {
+		return nil, err
+	}
+	if ns == nil {
+		// Remove dangling entities
+		if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+			// Entity's namespace doesn't exist anymore but the
+			// entity from the namespace still exists.
+			i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
+			err = i.entityPacker.DeleteItem(ctx, entity.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
+	}
+	nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	// Ensure that there are no entities with duplicate names
+	entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
+	if err != nil {
+		// In the upstream code this returns nil, but it seems to me,
+		// that it should return err after all.
+		return nil, err
+	}
+	if entityByName != nil {
+		i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name, "action", "merge the duplicate entities into one")
+		if !i.disableLowerCasedNames {
+			return nil, errDuplicateIdentityName
+		}
+	}
+
+	// Only update MemDB and don't hit the storage again
+	err = i.upsertEntity(nsCtx, entity, nil, false)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
+	}
+
+	return entity, nil
+}
+
 func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("loading entities")
@@ -264,49 +317,9 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 			}
 
 			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(ctx, item)
+				_, err := i.loadEntityFromBucketItem(ctx, item)
 				if err != nil {
 					return err
-				}
-				if entity == nil {
-					continue
-				}
-
-				ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
-				if err != nil {
-					return err
-				}
-				if ns == nil {
-					// Remove dangling entities
-					if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
-						// Entity's namespace doesn't exist anymore but the
-						// entity from the namespace still exists.
-						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
-						err = i.entityPacker.DeleteItem(ctx, entity.ID)
-						if err != nil {
-							return err
-						}
-					}
-					continue
-				}
-				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
-
-				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
-				if err != nil {
-					return nil
-				}
-				if entityByName != nil {
-					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name, "action", "merge the duplicate entities into one")
-					if !i.disableLowerCasedNames {
-						return errDuplicateIdentityName
-					}
-				}
-
-				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(nsCtx, entity, nil, false)
-				if err != nil {
-					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
 			}
 		}

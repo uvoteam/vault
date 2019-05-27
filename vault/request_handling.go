@@ -78,6 +78,20 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
 			return nil, nil, err
 		}
+
+		// When cache is reqested to be disabled, we cannot rely on
+		// MemDB alone.  Thus, we're checking store directly here.
+		if entity == nil && c.cachingDisabled {
+			item, err := c.identityStore.entityPacker.GetItem(entityID)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			entity, err = c.identityStore.loadEntityFromBucketItem(ctx, item)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	}
 
 	policies := make(map[string][]string)
